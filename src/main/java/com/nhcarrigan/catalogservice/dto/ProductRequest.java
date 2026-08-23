@@ -4,6 +4,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 
@@ -14,6 +15,10 @@ public class ProductRequest {
   private String name;
 
   @NotBlank(message = "SKU must not be blank")
+  @Size(min = 3, max = 50, message = "SKU must be between 3 and 50 characters")
+  @Pattern(
+      regexp = "^[A-Za-z0-9-]+$",
+      message = "SKU may only contain letters, numbers, and hyphens")
   private String sku;
 
   @NotBlank(message = "Category must not be blank")
@@ -43,7 +48,7 @@ public class ProductRequest {
   }
 
   public void setSku(String sku) {
-    this.sku = sku;
+    this.sku = sku == null ? null : sku.trim();
   }
 
   public String getCategory() {

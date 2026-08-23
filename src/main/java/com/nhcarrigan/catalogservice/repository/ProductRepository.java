@@ -21,6 +21,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
   
   List<Product> findByCategoryContainingIgnoreCase(String category);
 
+  List<Product> findByStockQuantityIsLessThanEqual(Integer threshold);
+
   @Query("SELECT DISTINCT p.category FROM Product p")
   List<String> listCategories();
 

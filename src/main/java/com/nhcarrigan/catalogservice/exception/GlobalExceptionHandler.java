@@ -1,6 +1,7 @@
 package com.nhcarrigan.catalogservice.exception;
 
 import java.util.List;
+import com.nhcarrigan.catalogservice.exception.CsvImportException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -97,5 +98,17 @@ public class GlobalExceptionHandler {
     ApiError body =
         new ApiError(HttpStatus.BAD_REQUEST.value(), "Bad Request", ex.getMessage(), List.of());
     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+  }
+
+  @ExceptionHandler(CsvImportException.class)
+  public ResponseEntity<ApiError> handleCsvImportException(CsvImportException exception) {
+    ApiError body =
+        new ApiError(
+            HttpStatus.BAD_REQUEST.value(),
+            "Bad Request",
+            exception.getMessage(),
+            List.of());
+
+    return ResponseEntity.badRequest().body(body);
   }
 }

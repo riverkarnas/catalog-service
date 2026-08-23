@@ -1,5 +1,6 @@
 package com.nhcarrigan.catalogservice.service;
 
+import com.nhcarrigan.catalogservice.dto.BulkProductDeleteResponse;
 import com.nhcarrigan.catalogservice.dto.BulkStockAdjustmentRequest;
 import com.nhcarrigan.catalogservice.dto.InventoryValueResponse;
 import com.nhcarrigan.catalogservice.dto.ProductPatchRequest;
@@ -307,6 +308,35 @@ public class ProductService {
   }
 
   /**
+   * Deletes multiple products in a best-effort operation.
+   *
+   * <p>Existing product ids are deleted, while ids that do not correspond to an existing product are
+   * returned as rejected. A missing product does not prevent other valid products from being deleted.
+   *
+   * @param ids the product ids to delete
+   * @return the ids that were deleted and the ids that were rejected
+   */
+  @Transactional
+  @CacheEvict(
+      cacheNames = {"products", "product"},
+      allEntries = true)
+  public BulkProductDeleteResponse bulkDelete(List<Long> ids) {
+    List<Long> deleted = new ArrayList<>();
+    List<Long> rejected = new ArrayList<>();
+
+    for (Long id : ids) {
+      if (productRepository.existsById(id)) {
+        productRepository.deleteById(id);
+        deleted.add(id);
+      } else {
+        rejected.add(id);
+      }
+    }
+
+    return new BulkProductDeleteResponse(deleted, rejected);
+  }
+
+  /**
    * Applies a signed delta to a product's stock quantity. Positive deltas restock, negative deltas
    * draw down stock. The operation is rejected (no partial writes) if it would take stock below
    * zero.
@@ -435,5 +465,17 @@ public class ProductService {
 
   private String normalizeSku(String sku){
     return sku.toUpperCase(Locale.ROOT);
+  }
+
+  /**
+   * Searches for products with a stock quantity at or below a certain threshold, given by user or default.
+   * returns a list of products that meet the criteria.
+   * 
+   * @param threshold the maximum stock quantity for products to include in the result
+   * @return a list of products with a stock quantity at or below the threshold
+   */
+  @Transactional(readOnly = true)
+  public List<Product> searchByStockQuantity(Integer threshold) {
+    return productRepository.findByStockQuantityIsLessThanEqual(threshold);
   }
 }

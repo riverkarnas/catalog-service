@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nhcarrigan.catalogservice.dto.StockAdjustmentRequest;
 import com.nhcarrigan.catalogservice.exception.GlobalExceptionHandler;
+import com.nhcarrigan.catalogservice.service.ProductImportService;
 import com.nhcarrigan.catalogservice.service.ProductService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +31,8 @@ class ProductControllerOptimisticLockingTest {
   @Autowired private ObjectMapper objectMapper;
 
   @MockBean private ProductService productService;
+
+  @MockBean private ProductImportService productImportService;
 
   @Test
   void optimisticLockingFailureReturns409Conflict() throws Exception {

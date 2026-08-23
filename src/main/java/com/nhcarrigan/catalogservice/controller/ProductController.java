@@ -1,8 +1,10 @@
 package com.nhcarrigan.catalogservice.controller;
 
+import com.nhcarrigan.catalogservice.dto.BulkProductDeleteResponse;
 import com.nhcarrigan.catalogservice.dto.BulkStockAdjustmentRequest;
 import com.nhcarrigan.catalogservice.dto.InventoryValueResponse;
 import com.nhcarrigan.catalogservice.dto.ProductCreationResponse;
+import com.nhcarrigan.catalogservice.dto.ProductImportResponse;
 import com.nhcarrigan.catalogservice.dto.ProductPageResponse;
 import com.nhcarrigan.catalogservice.dto.ProductPatchRequest;
 import com.nhcarrigan.catalogservice.dto.ProductRequest;
@@ -10,14 +12,17 @@ import com.nhcarrigan.catalogservice.dto.StockAdjustmentRequest;
 import com.nhcarrigan.catalogservice.entity.Product;
 import com.nhcarrigan.catalogservice.entity.StockAdjustmentLog;
 import com.nhcarrigan.catalogservice.exception.InvalidSearchCriteriaException;
+import com.nhcarrigan.catalogservice.service.ProductImportService;
 import com.nhcarrigan.catalogservice.service.ProductService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import java.math.BigDecimal;
 import java.util.List;
+
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,6 +34,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * REST controller exposing CRUD and search operations for {@link Product} resources. All business
@@ -42,9 +48,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProductController {
 
   private final ProductService productService;
+  private final ProductImportService productImportService;
 
-  public ProductController(ProductService productService) {
+  public ProductController(
+      ProductService productService,
+      ProductImportService productImportService) {
     this.productService = productService;
+    this.productImportService = productImportService;
   }
 
   /**
@@ -154,6 +164,17 @@ public class ProductController {
         return productService.findBySku(sku);
     }
   /**
+   * Returns products with a stock quantity at or below a certain threshold, provided by user or default.
+   *
+   * @param threshold the maximum stock quantity for products to include in the result
+   * @return a list of products with a stock quantity at or below the threshold
+   */
+  @GetMapping("/low-stock")
+  public List<Product> getLowStock(@RequestParam(defaultValue = "5") Integer threshold) {
+    return productService.searchByStockQuantity(threshold);
+  }
+
+  /**
    * Creates a new product.
    *
    * @param request the product fields to create; validated via {@link Valid}
@@ -187,6 +208,14 @@ public class ProductController {
       @NotEmpty(message = "At least one product is required") @RequestBody
           List<@Valid ProductRequest> requests) {
     return ResponseEntity.status(HttpStatus.CREATED).body(productService.bulkCreate(requests));
+  }
+
+  @PostMapping(
+      value = "/import",
+      consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  public ResponseEntity<ProductImportResponse> importProducts(
+      @RequestParam("file") MultipartFile file) {
+    return ResponseEntity.ok(productImportService.importCsv(file));
   }
 
   /**
@@ -233,6 +262,20 @@ public class ProductController {
   public ResponseEntity<Void> delete(@PathVariable Long id) {
     productService.delete(id);
     return ResponseEntity.noContent().build();
+  }
+
+  /**
+   * Deletes multiple products in a single request.
+   *
+   * <p>Existing product ids are deleted, while ids that do not exist are returned as rejected.
+   *
+   * @param ids the product ids to delete; the list must contain at least one id
+   * @return the ids that were deleted and the ids that were rejected
+   */
+  @DeleteMapping("/bulk")
+  public BulkProductDeleteResponse bulkDelete(
+      @NotEmpty(message = "At least one product ID is required") @RequestBody List<Long> ids) {
+    return productService.bulkDelete(ids);
   }
 
   /**

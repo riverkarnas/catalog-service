@@ -2,22 +2,24 @@ package com.nhcarrigan.catalogservice.dto;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
-
 import org.springframework.lang.Nullable;
 
 /** Payload for partially updating (PATCH) a product. */
 public class ProductPatchRequest {
 
-  @Nullable
-  private String name;
+  @Nullable private String name;
 
   @Nullable
+  @Size(min = 3, max = 50, message = "SKU must be between 3 and 50 characters")
+  @Pattern(
+      regexp = "^[A-Za-z0-9-]+$",
+      message = "SKU may only contain letters, numbers, and hyphens")
   private String sku;
 
-  @Nullable
-  private String category;
+  @Nullable private String category;
 
   @Nullable
   @DecimalMin(value = "0.01", message = "Price must be greater than 0.00")
@@ -44,7 +46,7 @@ public class ProductPatchRequest {
   }
 
   public void setSku(String sku) {
-    this.sku = sku;
+    this.sku = sku == null ? null : sku.trim();
   }
 
   public String getCategory() {

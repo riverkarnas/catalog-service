@@ -195,6 +195,47 @@ class ProductControllerTest {
   }
 
   @Test
+  void bulkDeleteSeparatesValidAndInvalidIds() throws Exception {
+    Product firstProduct = createTestProduct("BULK-DELETE-1", 10);
+    Product secondProduct = createTestProduct("BULK-DELETE-2", 5);
+
+    String request =
+        """
+        [
+            %d,
+            -999,
+            %d
+        ]
+        """
+            .formatted(
+                firstProduct.getId(),
+                secondProduct.getId());
+
+    mockMvc
+        .perform(
+            delete("/api/products/bulk")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(request))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.deleted", hasSize(2)))
+        .andExpect(jsonPath("$.deleted[0]", is(firstProduct.getId().intValue())))
+        .andExpect(jsonPath("$.deleted[1]", is(secondProduct.getId().intValue())))
+        .andExpect(jsonPath("$.rejected", hasSize(1)))
+        .andExpect(jsonPath("$.rejected[0]", is(-999)));
+  }
+
+  @Test
+  void bulkDeleteRejectsEmptyRequest() throws Exception {
+    mockMvc
+        .perform(
+            delete("/api/products/bulk")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("[]"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.error", is("Validation Failed")));
+  }
+
+  @Test
   void getUnknownProductReturns404() throws Exception {
     mockMvc.perform(get("/api/products/999999")).andExpect(status().isNotFound());
   }

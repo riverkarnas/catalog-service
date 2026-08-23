@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.InstanceOfAssertFactories.INSTANT;
 
+import com.nhcarrigan.catalogservice.dto.BulkProductDeleteResponse;
 import com.nhcarrigan.catalogservice.dto.BulkStockAdjustmentRequest;
 import com.nhcarrigan.catalogservice.dto.ProductRequest;
 import com.nhcarrigan.catalogservice.entity.Product;
@@ -328,6 +329,49 @@ class ProductServiceTest {
 
     assertThat(logs.get(1).getDelta()).isEqualTo(5);
     assertThat(logs.get(1).getResultingQuantity()).isEqualTo(15);
+  }
+
+  @Test
+  void bulkDeleteDeletesAllExistingProducts() {
+    Product secondProduct = createTestProduct("TEST-SKU-" + System.nanoTime(), 5);
+
+    BulkProductDeleteResponse response =
+        productService.bulkDelete(List.of(testProduct.getId(), secondProduct.getId()));
+
+    assertThat(response.deleted())
+        .containsExactly(testProduct.getId(), secondProduct.getId());
+    assertThat(response.rejected()).isEmpty();
+
+    assertThat(productRepository.findById(testProduct.getId())).isEmpty();
+    assertThat(productRepository.findById(secondProduct.getId())).isEmpty();
+  }
+
+  @Test
+  void bulkDeleteSeparatesValidAndInvalidIds() {
+    Product secondProduct = createTestProduct("TEST-SKU-" + System.nanoTime(), 5);
+    long missingId = -999L;
+
+    BulkProductDeleteResponse response =
+        productService.bulkDelete(
+            List.of(testProduct.getId(), missingId, secondProduct.getId()));
+
+    assertThat(response.deleted())
+        .containsExactly(testProduct.getId(), secondProduct.getId());
+    assertThat(response.rejected()).containsExactly(missingId);
+
+    assertThat(productRepository.findById(testProduct.getId())).isEmpty();
+    assertThat(productRepository.findById(secondProduct.getId())).isEmpty();
+  }
+
+  @Test
+  void bulkDeleteRejectsDuplicateIdAfterFirstDeletion() {
+    BulkProductDeleteResponse response =
+        productService.bulkDelete(List.of(testProduct.getId(), testProduct.getId()));
+
+    assertThat(response.deleted()).containsExactly(testProduct.getId());
+    assertThat(response.rejected()).containsExactly(testProduct.getId());
+
+    assertThat(productRepository.findById(testProduct.getId())).isEmpty();
   }
 
   @Test
