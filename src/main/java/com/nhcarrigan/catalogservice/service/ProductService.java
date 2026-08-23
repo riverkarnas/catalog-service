@@ -90,7 +90,7 @@ public class ProductService {
   @Transactional(readOnly = true)
   public Product findBySku(String sku){
     String normalizedSku = normalizeSku(sku);
-    return productRepository.getBySku(normalizedSku).orElseThrow(() -> new ProductNotFoundException(normalizedSku));
+    return productRepository.getBySku(normalizedSku).orElseThrow(() -> new ProductNotFoundException(sku));
   }
 
   /**
